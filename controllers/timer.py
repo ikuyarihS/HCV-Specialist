@@ -35,7 +35,7 @@ class Timer(commands.Cog):
             with open('data/timer.json') as data:
                 Timer.checkmarks = json.load(data)
 
-            for checkmark in self.checkmarks.values():
+            for checkmark in Timer.checkmarks.values():
                 checkmark['date'] = datetime.strptime(checkmark['date'], '%Y-%m-%d %H:%M:%S')
         except Exception as e:
             print(e)
@@ -53,7 +53,8 @@ class Timer(commands.Cog):
 
     @staticmethod
     async def check_time():
-        for key, checkmark in Timer.checkmarks.items():
+        items = list(Timer.checkmarks.items())
+        for key, checkmark in items:
             channel = Timer.client.get_guild(552997494641000468).get_channel(checkmark['channel_id'])
             if not channel:
                 del Timer.checkmarks[key]
