@@ -24,7 +24,6 @@ class Timer(commands.Cog):
 
         self.bot: commands.Bot = bot
         Timer.client = bot
-        self.initiated = False
 
         self.initiate()
 
@@ -40,19 +39,23 @@ class Timer(commands.Cog):
         except Exception as e:
             print(e)
 
-    def store_data(self):
+    @staticmethod
+    def store_data(checkmarks):
         def myconverter(o):
             if isinstance(o, datetime):
                 return o.__str__()
 
         try:
             with open('data/timer.json', 'w') as data:
-                json.dump(Timer.checkmarks, data, indent=4, default=myconverter)
+                json.dump(checkmarks, data, indent=4, default=myconverter)
         except RuntimeError:
             pass
 
     @staticmethod
     async def check_time():
+        if not Timer.checkmarks:
+            return
+
         items = list(Timer.checkmarks.items())
         for key, checkmark in items:
             channel = Timer.client.get_guild(552997494641000468).get_channel(checkmark['channel_id'])
@@ -61,6 +64,8 @@ class Timer(commands.Cog):
                 continue
 
             await channel.edit(name=f"{checkmark['desc']}: {Timer.get_timer(checkmark['date'])}")
+
+        Timer.store_data(Timer.checkmarks)
 
     @staticmethod
     def get_timer(date) -> str:
@@ -81,17 +86,15 @@ class Timer(commands.Cog):
 
         current_time = "{day}{hour}{min}".format(
             day=Timer.no_zero(diff_days, "d "),
-            hour="0{h}h".format(h=diff_hours)[-3:]
-            if diff_days > 0 else Timer.no_zero(diff_hours, "h"),
-            min="0{m}m".format(m=diff_minutes)[-3:]
-            if (diff_days > 0 or diff_hours) and diff_minutes > 0
+            hour="0{h}h".format(h=diff_hours)[-3:] if diff_days > 0 else Timer.no_zero(diff_hours, "h"),
+            min="0{m}m".format(m=diff_minutes)[-3:] if (diff_days > 0 or diff_hours) and diff_minutes > 0
             else Timer.no_zero(diff_minutes, 'm'))
 
         return current_time
 
     @staticmethod
     def no_zero(number, text_if_not_zero):
-        return "{}{}".format(number, text_if_not_zero) if number != 0 else ""
+        return f'{number}{text_if_not_zero}' if number != 0 else ""
 
     @commands.command(pass_context=True, name='timer', description=create_timer_desc)
     async def create_timer(self, ctx, *args):
@@ -108,7 +111,7 @@ class Timer(commands.Cog):
                 'channel_id': channel.id
             }
 
-            self.store_data()
+            Timer.store_data(Timer.checkmarks)
 
             await ctx.send(embed=Embed(description=f'Received date {date}, description: {desc}'))
             await Timer.check_time()
